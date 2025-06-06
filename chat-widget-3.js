@@ -541,9 +541,9 @@
         },
         branding: {
             logo: '',
-            name: 'Diálogo Digital',
-            welcomeText: '¡Obtén respuestas instantáneas a tus preguntas!',
-            responseTimeText: 'Tiempo de respuesta medio: menos de 30 segundos!',
+            name: '',
+            welcomeText: '',
+            responseTimeText: '',
             poweredBy: {
                 text: 'Desarrollado por Diálogo Digital',
                 link: 'https://dialogodigital.life'

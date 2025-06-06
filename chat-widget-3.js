@@ -530,6 +530,31 @@
             cursor: not-allowed;
             transform: none;
         }
+
+        .chat-resize-handle {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 18px;
+            height: 18px;
+            cursor: nwse-resize;
+            z-index: 1100;
+            background: rgba(0,0,0,0.05);
+            border-top-left-radius: 20px;
+        }
+        .chat-resize-handle:hover {
+            background: rgba(16,185,129,0.15);
+        }
+
+        .chat-resize-handle svg {
+            position: absolute;
+            left: 1px;
+            top: 1px;
+            width: 16px;
+            height: 16px;
+            pointer-events: none;
+            opacity: 0.7;
+        }
     `;
     document.head.appendChild(widgetStyles);
 
@@ -543,7 +568,7 @@
             logo: '',
             name: '',
             welcomeText: '',
-            responseTimeText: '',
+            responseTimeText: 'Tiempo de respuesta medio: menos de 30 segundos!',
             poweredBy: {
                 text: 'Desarrollado por Diálogo Digital',
                 link: 'https://dialogodigital.life'
@@ -979,5 +1004,39 @@
         button.addEventListener('click', () => {
             chatWindow.classList.remove('visible');
         });
+    });
+
+    // Добавляем resize handle в верхний левый угол
+    const resizeHandle = document.createElement('div');
+    resizeHandle.className = 'chat-resize-handle';
+    resizeHandle.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none;"><path d="M2 14L14 2" stroke="#10b981" stroke-width="2" stroke-linecap="round"/></svg>`;
+    chatWindow.appendChild(resizeHandle);
+
+    // Логика изменения размера окна
+    let isResizing = false;
+    let startX, startY, startWidth, startHeight;
+    resizeHandle.addEventListener('mousedown', function(e) {
+        isResizing = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startWidth = parseInt(document.defaultView.getComputedStyle(chatWindow).width, 10);
+        startHeight = parseInt(document.defaultView.getComputedStyle(chatWindow).height, 10);
+        document.body.style.userSelect = 'none';
+    });
+    document.addEventListener('mousemove', function(e) {
+        if (!isResizing) return;
+        let newWidth = startWidth - (e.clientX - startX);
+        let newHeight = startHeight - (e.clientY - startY);
+        // Ограничения по минимальному и максимальному размеру
+        newWidth = Math.max(320, Math.min(600, newWidth));
+        newHeight = Math.max(400, Math.min(800, newHeight));
+        chatWindow.style.width = newWidth + 'px';
+        chatWindow.style.height = newHeight + 'px';
+    });
+    document.addEventListener('mouseup', function() {
+        if (isResizing) {
+            isResizing = false;
+            document.body.style.userSelect = '';
+        }
     });
 })();

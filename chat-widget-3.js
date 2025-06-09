@@ -560,6 +560,8 @@
             pointer-events: none;
             opacity: 0.7;
         }
+
+        .chat-widget-resizing, .chat-widget-resizing * { user-select: none !important; }
     `;
     document.head.appendChild(widgetStyles);
 
@@ -707,7 +709,7 @@
     // Function to convert URLs in text to clickable links
     function linkifyText(text) {
         // URL pattern that matches http, https, ftp links
-        const urlPattern = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
+        const urlPattern = /(\b(https?|ftp):\/\/-A-Z0-9+&@#\/%?=~_|!:,.;*-A-Z0-9+&@#\/%=~_|)/gim;
         
         // Convert URLs to HTML links
         return text.replace(urlPattern, function(url) {
@@ -939,62 +941,29 @@
         chatWindow.querySelector('.chat-welcome').style.display = 'none';
         chatBody.classList.add('active');
         conversationId = createSessionId();
-        // Показываем typing indicator
-        const typingIndicator = createTypingIndicator();
-        messagesContainer.appendChild(typingIndicator);
-        // Загружаем сессию (без userName/email)
-        const sessionData = [{
-            action: "loadPreviousSession",
-            sessionId: conversationId,
-            route: settings.webhook.route,
-            metadata: {}
-        }];
-        try {
-            const sessionResponse = await fetch(settings.webhook.url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(sessionData)
-            });
-            const sessionResponseData = await sessionResponse.json();
-            // Удаляем typing indicator
-            messagesContainer.removeChild(typingIndicator);
-            // Показываем приветственное сообщение от бота
-            const botMessage = document.createElement('div');
-            botMessage.className = 'chat-bubble bot-bubble';
-            const messageText = Array.isArray(sessionResponseData) ? 
-                sessionResponseData[0].output : sessionResponseData.output;
-            botMessage.innerHTML = linkifyText(messageText);
-            messagesContainer.appendChild(botMessage);
-            // Добавляем подсказки, если есть
-            if (settings.suggestedQuestions && Array.isArray(settings.suggestedQuestions) && settings.suggestedQuestions.length > 0) {
-                const suggestedQuestionsContainer = document.createElement('div');
-                suggestedQuestionsContainer.className = 'suggested-questions';
-                settings.suggestedQuestions.forEach(question => {
-                    const questionButton = document.createElement('button');
-                    questionButton.className = 'suggested-question-btn';
-                    questionButton.textContent = question;
-                    questionButton.addEventListener('click', () => {
-                        submitMessage(question);
-                        if (suggestedQuestionsContainer.parentNode) {
-                            suggestedQuestionsContainer.parentNode.removeChild(suggestedQuestionsContainer);
-                        }
-                    });
-                    suggestedQuestionsContainer.appendChild(questionButton);
+        // Показываем приветственное сообщение от ассистента
+        const botMessage = document.createElement('div');
+        botMessage.className = 'chat-bubble bot-bubble';
+        botMessage.innerHTML = 'Hola!<br> Soy el asistente IA<br>Pregúntame todo lo que te interesa!';
+        messagesContainer.appendChild(botMessage);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        // Если нужны подсказки — показываем их
+        if (settings.suggestedQuestions && Array.isArray(settings.suggestedQuestions) && settings.suggestedQuestions.length > 0) {
+            const suggestedQuestionsContainer = document.createElement('div');
+            suggestedQuestionsContainer.className = 'suggested-questions';
+            settings.suggestedQuestions.forEach(question => {
+                const questionButton = document.createElement('button');
+                questionButton.className = 'suggested-question-btn';
+                questionButton.textContent = question;
+                questionButton.addEventListener('click', () => {
+                    submitMessage(question);
+                    if (suggestedQuestionsContainer.parentNode) {
+                        suggestedQuestionsContainer.parentNode.removeChild(suggestedQuestionsContainer);
+                    }
                 });
-                messagesContainer.appendChild(suggestedQuestionsContainer);
-            }
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        } catch (error) {
-            console.error('Session error:', error);
-            const indicator = messagesContainer.querySelector('.typing-indicator');
-            if (indicator) messagesContainer.removeChild(indicator);
-            const errorMessage = document.createElement('div');
-            errorMessage.className = 'chat-bubble bot-bubble';
-            errorMessage.textContent = "Lo siento, no pude подключиться к серверу. Пожалуйста, попробуйте еще раз позже.";
-            messagesContainer.appendChild(errorMessage);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                suggestedQuestionsContainer.appendChild(questionButton);
+            });
+            messagesContainer.appendChild(suggestedQuestionsContainer);
         }
     });
     
@@ -1048,7 +1017,7 @@
         startY = e.clientY;
         startWidth = parseInt(document.defaultView.getComputedStyle(chatWindow).width, 10);
         startHeight = parseInt(document.defaultView.getComputedStyle(chatWindow).height, 10);
-        document.body.style.userSelect = 'none';
+        document.body.classList.add('chat-widget-resizing');
     });
     document.addEventListener('mousemove', function(e) {
         if (!isResizing) return;
@@ -1063,7 +1032,7 @@
     document.addEventListener('mouseup', function() {
         if (isResizing) {
             isResizing = false;
-            document.body.style.userSelect = '';
+            document.body.classList.remove('chat-widget-resizing');
         }
     });
 })();

@@ -384,13 +384,18 @@
             color: var(--chat-color-primary);
             text-decoration: none;
             font-size: 12px;
-            opacity: 0.8;
-            transition: var(--chat-transition);
+            opacity: 0.5;
+            transition: opacity 0.2s;
             font-family: inherit;
+            display: inline-block;
+            margin: 0 auto;
+            pointer-events: auto;
         }
 
         .chat-assist-widget .chat-footer-link:hover {
             opacity: 1;
+            text-decoration: underline;
+            cursor: pointer;
         }
 
         .chat-assist-widget .suggested-questions {
@@ -635,22 +640,6 @@
             </button>
             <p class="chat-response-time">${settings.branding.responseTimeText}</p>
         </div>
-        <div class="user-registration">
-            <h2 class="registration-title">Por favor, introduce tus datos para empezar el chat</h2>
-            <form class="registration-form">
-                <div class="form-field">
-                    <label class="form-label" for="chat-user-name">Nombre</label>
-                    <input type="text" id="chat-user-name" class="form-input" placeholder="Tu nombre" required>
-                    <div class="error-text" id="name-error"></div>
-                </div>
-                <div class="form-field">
-                    <label class="form-label" for="chat-user-email">Correo electrónico</label>
-                    <input type="email" id="chat-user-email" class="form-input" placeholder="Tu correo electrónico" required>
-                    <div class="error-text" id="email-error"></div>
-                </div>
-                <button type="submit" class="submit-registration">Continuar al chat</button>
-            </form>
-        </div>
     `;
 
     // Create chat interface without duplicating the header
@@ -667,7 +656,7 @@
                 </button>
             </div>
             <div class="chat-footer">
-                <a class="chat-footer-link" href="${settings.branding.poweredBy.link}" target="_blank">${settings.branding.poweredBy.text}</a>
+                <a class="chat-footer-link" href="https://www.dialogodigital.life" target="_blank" rel="noopener noreferrer">powered by Diálogo Digital</a>
             </div>
         </div>
     `;
@@ -696,13 +685,7 @@
     const sendButton = chatWindow.querySelector('.chat-submit');
     
     // Registration form elements
-    const registrationForm = chatWindow.querySelector('.registration-form');
-    const userRegistration = chatWindow.querySelector('.user-registration');
     const chatWelcome = chatWindow.querySelector('.chat-welcome');
-    const nameInput = chatWindow.querySelector('#chat-user-name');
-    const emailInput = chatWindow.querySelector('#chat-user-email');
-    const nameError = chatWindow.querySelector('#name-error');
-    const emailError = chatWindow.querySelector('#email-error');
 
     // Helper function to generate unique session ID
     function createSessionId() {
@@ -894,35 +877,23 @@
     // Send a message to the webhook
     async function submitMessage(messageText) {
         if (isWaitingForResponse) return;
-        
         isWaitingForResponse = true;
-        
-        // Get user info if available
-        const email = nameInput ? nameInput.value.trim() : "";
-        const name = emailInput ? emailInput.value.trim() : "";
-        
         const requestData = {
             action: "sendMessage",
             sessionId: conversationId,
             route: settings.webhook.route,
             chatInput: messageText,
-            metadata: {
-                userId: email,
-                userName: name
-            }
+            metadata: {}
         };
-
-        // Display user message
         const userMessage = document.createElement('div');
         userMessage.className = 'chat-bubble user-bubble';
         userMessage.textContent = messageText;
         messagesContainer.appendChild(userMessage);
-        
-        // Show typing indicator
+        // Индикатор печати (троеточие)
         const typingIndicator = createTypingIndicator();
         messagesContainer.appendChild(typingIndicator);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
+        // Прокручиваем так, чтобы индикатор был виден, но не в самый низ
+        typingIndicator.scrollIntoView({ behavior: 'smooth', block: 'start' });
         try {
             const response = await fetch(settings.webhook.url, {
                 method: 'POST',
@@ -931,31 +902,27 @@
                 },
                 body: JSON.stringify(requestData)
             });
-            
             const responseData = await response.json();
-            
-            // Remove typing indicator
             messagesContainer.removeChild(typingIndicator);
-            
-            // Display bot response with clickable links
             const botMessage = document.createElement('div');
             botMessage.className = 'chat-bubble bot-bubble';
             const responseText = Array.isArray(responseData) ? responseData[0].output : responseData.output;
             botMessage.innerHTML = linkifyText(responseText);
             messagesContainer.appendChild(botMessage);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            // Плавная прокрутка к новому сообщению от ИИ
+            setTimeout(() => {
+                botMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 50);
         } catch (error) {
             console.error('Message submission error:', error);
-            
-            // Remove typing indicator
             messagesContainer.removeChild(typingIndicator);
-            
-            // Show error message
             const errorMessage = document.createElement('div');
             errorMessage.className = 'chat-bubble bot-bubble';
-            errorMessage.textContent = "Lo siento, no pude enviar tu mensaje. Por favor, inténtalo de nuevo.";
+            errorMessage.textContent = "Lo siento, no pude отправить твое сообщение. Пожалуйста, попробуйте еще раз.";
             messagesContainer.appendChild(errorMessage);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            setTimeout(() => {
+                errorMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 50);
         } finally {
             isWaitingForResponse = false;
         }
@@ -968,8 +935,68 @@
     }
 
     // Event listeners
-    startChatButton.addEventListener('click', showRegistrationForm);
-    registrationForm.addEventListener('submit', handleRegistration);
+    startChatButton.addEventListener('click', async () => {
+        chatWindow.querySelector('.chat-welcome').style.display = 'none';
+        chatBody.classList.add('active');
+        conversationId = createSessionId();
+        // Показываем typing indicator
+        const typingIndicator = createTypingIndicator();
+        messagesContainer.appendChild(typingIndicator);
+        // Загружаем сессию (без userName/email)
+        const sessionData = [{
+            action: "loadPreviousSession",
+            sessionId: conversationId,
+            route: settings.webhook.route,
+            metadata: {}
+        }];
+        try {
+            const sessionResponse = await fetch(settings.webhook.url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(sessionData)
+            });
+            const sessionResponseData = await sessionResponse.json();
+            // Удаляем typing indicator
+            messagesContainer.removeChild(typingIndicator);
+            // Показываем приветственное сообщение от бота
+            const botMessage = document.createElement('div');
+            botMessage.className = 'chat-bubble bot-bubble';
+            const messageText = Array.isArray(sessionResponseData) ? 
+                sessionResponseData[0].output : sessionResponseData.output;
+            botMessage.innerHTML = linkifyText(messageText);
+            messagesContainer.appendChild(botMessage);
+            // Добавляем подсказки, если есть
+            if (settings.suggestedQuestions && Array.isArray(settings.suggestedQuestions) && settings.suggestedQuestions.length > 0) {
+                const suggestedQuestionsContainer = document.createElement('div');
+                suggestedQuestionsContainer.className = 'suggested-questions';
+                settings.suggestedQuestions.forEach(question => {
+                    const questionButton = document.createElement('button');
+                    questionButton.className = 'suggested-question-btn';
+                    questionButton.textContent = question;
+                    questionButton.addEventListener('click', () => {
+                        submitMessage(question);
+                        if (suggestedQuestionsContainer.parentNode) {
+                            suggestedQuestionsContainer.parentNode.removeChild(suggestedQuestionsContainer);
+                        }
+                    });
+                    suggestedQuestionsContainer.appendChild(questionButton);
+                });
+                messagesContainer.appendChild(suggestedQuestionsContainer);
+            }
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        } catch (error) {
+            console.error('Session error:', error);
+            const indicator = messagesContainer.querySelector('.typing-indicator');
+            if (indicator) messagesContainer.removeChild(indicator);
+            const errorMessage = document.createElement('div');
+            errorMessage.className = 'chat-bubble bot-bubble';
+            errorMessage.textContent = "Lo siento, no pude подключиться к серверу. Пожалуйста, попробуйте еще раз позже.";
+            messagesContainer.appendChild(errorMessage);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+    });
     
     sendButton.addEventListener('click', () => {
         const messageText = messageTextarea.value.trim();

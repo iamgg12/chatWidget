@@ -72,7 +72,9 @@
             gap: 12px;
             background: linear-gradient(135deg, var(--chat-color-primary) 0%, var(--chat-color-secondary) 100%);
             color: white;
-            position: relative;
+            position: sticky;
+            top: 0;
+            z-index: 2;
         }
 
         .chat-assist-widget .chat-header-logo {
@@ -179,6 +181,7 @@
             flex: 1;
             overflow-y: auto;
             padding: 20px;
+            padding-top: 72px; /* высота шапки + отступ */
             background: #f9fafb;
             display: flex;
             flex-direction: column;

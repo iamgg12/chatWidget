@@ -181,7 +181,6 @@
             flex: 1;
             overflow-y: auto;
             padding: 20px;
-            padding-top: 72px; /* высота шапки + отступ */
             background: #f9fafb;
             display: flex;
             flex-direction: column;
